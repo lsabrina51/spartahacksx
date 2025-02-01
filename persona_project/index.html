@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Persona Photo Booth</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Persona Photo Booth</h1>
+    <input type="file" id="imageUpload" accept="image/*">
+    <div class="image-container">
+        <div class="persona-image">
+            <h2>Good Persona</h2>
+            <canvas id="goodPersonaCanvas" width="256" height="256"></canvas>
+        </div>
+        <div class="persona-image">
+            <h2>Evil Persona</h2>
+            <canvas id="evilPersonaCanvas" width="256" height="256"></canvas>
+        </div>
+        <div class="download-buttons">
+            <button id="downloadGood">Download Good Persona</button>
+            <button id="downloadEvil">Download Evil Persona</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
