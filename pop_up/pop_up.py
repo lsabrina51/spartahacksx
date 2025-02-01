@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk, ImageEnhance, ImageOps
 import os
+import subprocess  # To run another program
 
 class PersonaPhotoBooth:
     def __init__(self, root):
@@ -31,12 +32,9 @@ class PersonaPhotoBooth:
         self.evil_canvas = tk.Canvas(self.frame, width=256, height=256, bg="white")
         self.evil_canvas.grid(row=3, column=1)
 
-        # Download Buttons
-        self.download_good_button = tk.Button(self.frame, text="Download Good Persona", state=tk.DISABLED, command=self.download_good_persona)
-        self.download_good_button.grid(row=4, column=0, pady=10)
-
-        self.download_evil_button = tk.Button(self.frame, text="Download Evil Persona", state=tk.DISABLED, command=self.download_evil_persona)
-        self.download_evil_button.grid(row=4, column=1, pady=10)
+        # Deploy Button (to execute another program)
+        self.deploy_button = tk.Button(self.frame, text="Deploy", state=tk.DISABLED, command=self.deploy_program)
+        self.deploy_button.grid(row=5, column=0, columnspan=2, pady=10)
 
         # Image variables
         self.original_image = None
@@ -44,10 +42,23 @@ class PersonaPhotoBooth:
         self.evil_image = None
 
     def upload_image(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
+        # Open the file dialog and allow multiple image file types
+        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png"), ("Image Files", "*.jpg"), ("Image Files", "*.jpeg")])
+        
+        # Debugging print statement to ensure the correct file path is selected
+        print(f"Selected file path: {file_path}")
+        
         if file_path:
-            self.original_image = Image.open(file_path)
-            self.process_image()
+            try:
+                # Try opening the image
+                self.original_image = Image.open(file_path)
+                self.process_image()  # Process the image once loaded successfully
+            except Exception as e:
+                # If there's an error opening the file, show an error message
+                print(f"Error opening image: {e}")
+                # Optionally show a message box to inform the user
+                tk.messagebox.showerror("File Error", "Unable to open the selected image file.")
+
 
     def process_image(self):
         if self.original_image:
@@ -61,13 +72,15 @@ class PersonaPhotoBooth:
             # Apply the "Evil Persona" filter
             self.apply_evil_persona(self.evil_image)
 
-            # Display the processed images
-            self.display_image(self.good_image, self.good_canvas)
-            self.display_image(self.evil_image, self.evil_canvas)
+            # Automatically download the images
+            self.download_good_persona()
+            self.download_evil_persona()
 
-            # Enable the download buttons
-            self.download_good_button.config(state=tk.NORMAL)
-            self.download_evil_button.config(state=tk.NORMAL)
+            # Enable the deploy button after downloading
+            self.deploy_button.config(state=tk.NORMAL)
+
+            # Close the window after downloading the images
+            self.root.quit()
 
     def apply_good_persona(self, img):
         # Apply brightness enhancement (brighten the image)
@@ -75,17 +88,19 @@ class PersonaPhotoBooth:
         img.paste(enhancer.enhance(1.2))
 
     def apply_evil_persona(self, img):
-        # Apply brightness reduction and grayscale
+        # Apply brightness reduction
         enhancer = ImageEnhance.Brightness(img)
-        img.paste(enhancer.enhance(0.8))
+        img = enhancer.enhance(0.8)
+        
+        # Convert to grayscale
         img = ImageOps.grayscale(img)
-        self.evil_image = img.convert("RGB")
-
-    def display_image(self, img, canvas):
-        img_resized = img.resize((256, 256))
-        img_tk = ImageTk.PhotoImage(img_resized)
-        canvas.create_image(0, 0, image=img_tk, anchor=tk.NW)
-        canvas.image = img_tk  # Keep a reference to the image
+        
+        # Add a red tint to the grayscale image
+        red_overlay = Image.new("RGB", img.size, (255, 0, 0))  # Red color overlay
+        img = Image.composite(img.convert("RGB"), red_overlay, img.convert("L"))  # Blend grayscale with red overlay
+        
+        # Final conversion to RGB
+        self.evil_image = img
 
     def download_good_persona(self):
         if self.good_image:
@@ -98,6 +113,19 @@ class PersonaPhotoBooth:
             file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG", "*.png")])
             if file_path:
                 self.evil_image.save(file_path)
+
+    def deploy_program(self):
+        # Path to the other Python program you want to execute
+        deploy_script_path = "deploy_script.py"  # Replace with your actual script path
+
+        try:
+            # Execute the other Python script
+            subprocess.run(["python", deploy_script_path], check=True)
+            print("Deployment successful!")
+        except subprocess.CalledProcessError as e:
+            print(f"Error during deployment: {e}")
+        except FileNotFoundError:
+            print(f"Deployment script not found: {deploy_script_path}")
 
 
 if __name__ == "__main__":
