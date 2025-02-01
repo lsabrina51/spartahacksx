@@ -75,11 +75,19 @@ class PersonaPhotoBooth:
         img.paste(enhancer.enhance(1.2))
 
     def apply_evil_persona(self, img):
-        # Apply brightness reduction and grayscale
+        # Apply brightness reduction
         enhancer = ImageEnhance.Brightness(img)
-        img.paste(enhancer.enhance(0.8))
+        img = enhancer.enhance(0.8)
+        
+        # Convert to grayscale
         img = ImageOps.grayscale(img)
-        self.evil_image = img.convert("RGB")
+        
+        # Add a red tint to the grayscale image
+        red_overlay = Image.new("RGB", img.size, (255, 0, 0))  # Red color overlay
+        img = Image.composite(img.convert("RGB"), red_overlay, img.convert("L"))  # Blend grayscale with red overlay
+        
+        # Final conversion to RGB
+        self.evil_image = img
 
     def display_image(self, img, canvas):
         img_resized = img.resize((256, 256))
