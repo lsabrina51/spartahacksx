@@ -38,10 +38,18 @@ class PersonaPhotoBooth:
         self.download_evil_button = tk.Button(self.frame, text="Download Evil Persona", state=tk.DISABLED, command=self.download_evil_persona)
         self.download_evil_button.grid(row=4, column=1, pady=10)
 
+        # Deploy Button (to execute another program)
+        self.deploy_button = tk.Button(self.frame, text="Deploy", state=tk.DISABLED, command=self.deploy_program)
+        self.deploy_button.grid(row=5, column=0, columnspan=2, pady=10)
+
         # Image variables
         self.original_image = None
         self.good_image = None
         self.evil_image = None
+
+    def deploy_program(self): 
+        #connect with program later 
+        print("Hello world")
 
     def upload_image(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png"), ("Image Files", "*.jpg"), ("Image Files", "*.jpeg")])
@@ -65,9 +73,24 @@ class PersonaPhotoBooth:
             self.display_image(self.good_image, self.good_canvas)
             self.display_image(self.evil_image, self.evil_canvas)
 
+            self.save_images()
+
             # Enable the download buttons
-            self.download_good_button.config(state=tk.NORMAL)
-            self.download_evil_button.config(state=tk.NORMAL)
+            #self.download_good_button.config(state=tk.NORMAL)
+            #self.download_evil_button.config(state=tk.NORMAL)
+     
+    def save_images(self):
+        # Create a folder to save the images (if it doesn't exist already)
+        save_dir = "processed_images"
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        good_image_path = os.path.join(save_dir, f"good_persona.png")
+        evil_image_path = os.path.join(save_dir, f"evil_persona.png")
+
+        # Save the images
+        self.good_image.save(good_image_path)
+        self.evil_image.save(evil_image_path)
 
     def apply_good_persona(self, img):
         # Apply brightness enhancement (brighten the image)
