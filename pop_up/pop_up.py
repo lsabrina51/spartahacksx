@@ -44,7 +44,7 @@ class PersonaPhotoBooth:
         self.evil_image = None
 
     def upload_image(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
+        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png"), ("Image Files", "*.jpg"), ("Image Files", "*.jpeg")])
         if file_path:
             self.original_image = Image.open(file_path)
             self.process_image()
