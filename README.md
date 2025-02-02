@@ -9,11 +9,51 @@ Feeling down? Maybe the angel will swoop in with words of comfort and wisdom. To
 
 
 <h2>Usage</h2>
-<p>Write how you would use it here</p>
+<p>Yu will need theses depenedices and an openAI token 
+annotated-types==0.7.0
+anyio==4.8.0
+cachetools==5.5.1
+certifi==2025.1.31
+charset-normalizer==3.4.1
+click==8.1.8
+distro==1.9.0
+exceptiongroup==1.2.2
+google-api-core==2.24.1
+google-auth==2.38.0
+google-cloud-dialogflow==2.38.0
+google-cloud-speech==2.30.0
+google-cloud-texttospeech==2.24.0
+googleapis-common-protos==1.66.0
+grpcio==1.70.0
+grpcio-status==1.70.0
+gTTS==2.5.4
+h11==0.14.0
+httpcore==1.0.7
+httpx==0.28.1
+idna==3.10
+jiter==0.8.2
+openai==1.61.0
+pillow==11.1.0
+pip==22.0.2
+proto-plus==1.26.0
+protobuf==5.29.3
+pyasn1==0.6.1
+pyasn1_modules==0.4.1
+PyAudio==0.2.14
+pydantic==2.10.6
+pydantic_core==2.27.2
+pydub==0.25.1
+pygame==2.6.0
+requests==2.32.3
+rsa==4.9
+setuptools==59.6.0
+sniffio==1.3.1
+SpeechRecognition==3.14.1
+tqdm==4.67.1
+typing_extensions==4.12.2
+urllib3==2.3.0
+Wave==0.0.2
+</p>
 
-<h2>Configurations</h2>
-<ul>
-  <li>Write Dependencies and </li>
-</ul>
 
 
