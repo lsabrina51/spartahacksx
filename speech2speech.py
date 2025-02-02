@@ -6,9 +6,18 @@ from google.cloud import texttospeech
 import random
 from threading import Thread
 from openai import OpenAI
+#Sabrina code 
+from sabrina_test import PersonaPhotoBooth
+import tkinter as tk
+
+root = tk.Tk()
+app = PersonaPhotoBooth(root)
+
+
+#end of sabrina code 
 
 # Set Google API credentials
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "spartahack-449702-01bf43c0d13d.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "spartahack-449702-0585f5bb9a36.json"
 
 # Initialize the OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -161,6 +170,22 @@ def process_speech_to_gpt():
             # Step 6: Save the GPT response as an MP3 file
             save_audio_as_mp3(gpt_response, file_counter)
 
+            #sabrina code
+            app.insert_into_textbox(mood, gpt_response)
+
+            if mood == 'good' or mood is 'good': 
+                app.show_good_persona(); 
+                app.insert_into_textbox('good', gpt_response)
+            if mood == 'bad' or mood is 'bad':
+                app.show_bad_persona(); 
+                app.insert_into_textbox('bad', gpt_response)
+            
+
+            
+
+           #end sabrina
+
+
             # Increment the file counter for the next MP3 file
             file_counter += 1
         
@@ -172,6 +197,8 @@ thread = Thread(target=process_speech_to_gpt)
 thread.daemon = True
 thread.start()
 
+#sabrina code 
+root.mainloop()
 # Keep the main thread alive
 try:
     while True:

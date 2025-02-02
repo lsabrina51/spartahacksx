@@ -1,209 +1,153 @@
-import os
-import time
 import tkinter as tk
-import pyaudio
-import wave
-import random
-import uuid
-from google.cloud import speech
-from google.cloud import dialogflow_v2 as dialogflow
-from google.cloud import texttospeech
-from tkinter import messagebox
-from threading import Thread, Lock
-import queue
+from tkinter import filedialog, Toplevel
+from PIL import Image, ImageTk, ImageEnhance, ImageOps
 
-# Set Google API credentials
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "spartahack-449702-01bf43c0d13d.json"
+class PersonaPhotoBooth:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Persona Photo Booth")
+        
+        # Create a frame to hold the widgets
+        self.frame = tk.Frame(self.root)
+        self.frame.pack(pady=20)
 
-class SpeechDialogSystem:
-    def __init__(self):
-        self.speech_client = speech.SpeechClient()
-        self.session_id = str(uuid.uuid4())
-        self.message_queue = queue.Queue()
-        self.text_to_speech_client = texttospeech.TextToSpeechClient()
-        self.is_running = True
-        self.audio_lock = Lock()
-        
-        # Create main window
-        self.root = tk.Tk()
-        self.root.title("Speech Dialog System")
-        self.root.geometry("600x400")
-        
-        # Create text display
-        self.text_display = tk.Text(self.root, height=20, width=60)
-        self.text_display.pack(pady=10)
-        
-        # Create control buttons
-        self.start_button = tk.Button(self.root, text="Start", command=self.start_system)
-        self.start_button.pack(side=tk.LEFT, padx=10)
-        
-        self.stop_button = tk.Button(self.root, text="Stop", command=self.stop_system)
-        self.stop_button.pack(side=tk.LEFT, padx=10)
-        
-        # Initialize audio settings
-        self.setup_audio()
+        # Title
+        self.title = tk.Label(self.frame, text="Persona Photo Booth", font=("Arial", 24))
+        self.title.grid(row=0, column=0, columnspan=2, pady=20)
 
-    def setup_audio(self):
-        self.p = pyaudio.PyAudio()
-        # List available devices
-        info = self.p.get_host_api_info_by_index(0)
-        numdevices = info.get('deviceCount')
+        # Image Upload Button
+        self.upload_button = tk.Button(self.frame, text="Upload Image", command=self.upload_image)
+        self.upload_button.grid(row=1, column=0, columnspan=2, pady=10)
+
+        # Canvas for displaying the images
+        self.good_label = tk.Label(self.frame, text="Good Persona")
+        self.good_label.grid(row=2, column=0)
+        self.good_canvas = tk.Canvas(self.frame, width=256, height=256, bg="white")
+        self.good_canvas.grid(row=3, column=0)
+
+        self.evil_label = tk.Label(self.frame, text="Evil Persona")
+        self.evil_label.grid(row=2, column=1)
+        self.evil_canvas = tk.Canvas(self.frame, width=256, height=256, bg="white")
+        self.evil_canvas.grid(row=3, column=1)
+
+        # Deploy Button (to show the processed images)
+        self.deploy_button = tk.Button(self.frame, text="Deploy", state=tk.DISABLED, command=self.deploy_program)
+        self.deploy_button.grid(row=5, column=0, columnspan=2, pady=10)
+
+        # Image variables
+        self.original_image = None
+        self.good_image = None
+        self.evil_image = None
+
+    def deploy_program(self): 
+        if self.good_image and self.evil_image:
+            self.show_good_persona()
+            self.show_evil_persona()
+            self.hide_upload_interface()  # Hide the upload interface
+
+    def upload_image(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png"), ("Image Files", "*.jpg"), ("Image Files", "*.jpeg")])
+        if file_path:
+            self.original_image = Image.open(file_path)
+            self.process_image()
+
+    def process_image(self):
+        if self.original_image:
+            # Create a copy for the good persona and evil persona
+            self.good_image = self.original_image.copy()
+            self.evil_image = self.original_image.copy()
+
+            # Apply the "Good Persona" filter
+            self.apply_good_persona(self.good_image)
+
+            # Apply the "Evil Persona" filter
+            self.apply_evil_persona(self.evil_image)
+
+            # Display the processed images
+            self.display_image(self.good_image, self.good_canvas)
+            self.display_image(self.evil_image, self.evil_canvas)
+
+            # Enable the deploy button
+            self.deploy_button.config(state=tk.NORMAL)
+
+    def apply_good_persona(self, img):
+        # Apply brightness enhancement (brighten the image)
+        enhancer = ImageEnhance.Brightness(img)
+        img.paste(enhancer.enhance(1.2))
+
+    def apply_evil_persona(self, img):
+        # Apply brightness reduction
+        enhancer = ImageEnhance.Brightness(img)
+        img = enhancer.enhance(0.8)
         
-        self.log_message("Available Audio Devices:")
-        for i in range(numdevices):
-            device_info = self.p.get_device_info_by_host_api_device_index(0, i)
-            if device_info.get('maxInputChannels') > 0:
-                self.log_message(f"Input Device {i}: {device_info.get('name')}")
-
-    def log_message(self, message):
-        self.root.after(0, lambda: self.text_display.insert(tk.END, f"{message}\n"))
-        self.root.after(0, lambda: self.text_display.see(tk.END))
-
-    def record_audio(self):
-        with self.audio_lock:
-            stream = self.p.open(
-                format=pyaudio.paInt16,
-                channels=1,
-                rate=16000,
-                input=True,
-                input_device_index=1,  # Adjust based on your microphone
-                frames_per_buffer=1024
-            )
-            
-            self.log_message("Recording...")
-            frames = []
-            
-            # Record for 5 seconds
-            for _ in range(0, int(16000 / 1024 * 5)):
-                if not self.is_running:
-                    break
-                data = stream.read(1024, exception_on_overflow=False)
-                frames.append(data)
-            
-            stream.stop_stream()
-            stream.close()
-            
-            self.log_message("Recording finished.")
-            return b''.join(frames)
-
-    def recognize_speech(self, audio_data):
-        audio = speech.RecognitionAudio(content=audio_data)
-        config = speech.RecognitionConfig(
-            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-            sample_rate_hertz=16000,
-            language_code="en-US",
-        )
+        # Convert to grayscale
+        img = ImageOps.grayscale(img)
         
-        try:
-            response = self.speech_client.recognize(config=config, audio=audio)
-            if response.results:
-                return response.results[0].alternatives[0].transcript
-        except Exception as e:
-            self.log_message(f"Speech recognition error: {e}")
-        return ""
-
-    def get_dialogflow_response(self, text, mood):
-        if not text:
-            return "No input received."
-            
-        session_client = dialogflow.SessionsClient()
-        session = session_client.session_path('spartahack-449702', self.session_id)
+        # Add a red tint to the grayscale image
+        red_overlay = Image.new("RGB", img.size, (255, 0, 0))  # Red color overlay
+        img = Image.composite(img.convert("RGB"), red_overlay, img.convert("L"))  # Blend grayscale with red overlay
         
-        # Modify prompt based on mood
-        if mood == "evil":
-            prompt = f"Act critical and lead people in the wrong direction. Respond in a mean, unhelpful way. The question is: {text}"
-        else:
-            prompt = f"Be kind, supportive, and give good advice. Respond in a positive, encouraging way. The question is: {text}"
-        
-        text_input = dialogflow.TextInput(text=prompt, language_code='en')
-        query_input = dialogflow.QueryInput(text=text_input)
-        
-        try:
-            response = session_client.detect_intent(session=session, query_input=query_input)
-            return response.query_result.fulfillment_text
-        except Exception as e:
-            self.log_message(f"Dialogflow error: {e}")
-            return "Sorry, I couldn't process that."
+        # Final conversion to RGB
+        self.evil_image = img
 
-    def text_to_speech(self, text):
-        synthesis_input = texttospeech.SynthesisInput(text=text)
+    def display_image(self, img, canvas):
+        img_resized = img.resize((256, 256))
+        img_tk = ImageTk.PhotoImage(img_resized)
+        canvas.create_image(0, 0, image=img_tk, anchor=tk.NW)
+        canvas.image = img_tk  # Keep a reference to the image
+
+    def show_good_persona(self):
+        top = Toplevel(self.root)
+        top.title("Good Persona")
         
-        # Select voice based on mood
-        if "Evil:" in text:
-            voice = texttospeech.VoiceSelectionParams(
-                language_code="en-US",
-                name="en-US-Neural2-D",
-                ssml_gender=texttospeech.SsmlVoiceGender.MALE
-            )
-        else:
-            voice = texttospeech.VoiceSelectionParams(
-                language_code="en-US",
-                name="en-US-Neural2-C",
-                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
-            )
+        img_resized = self.good_image.resize((512, 512))
+        img_tk = ImageTk.PhotoImage(img_resized)
+        label = tk.Label(top, image=img_tk)
+        label.image = img_tk  # Keep a reference to the image
+        label.pack()
+
+        # Textbox for additional input or information
+        self.good_textbox = tk.Text(top, height=5, width=50)  # Adjust height and width as needed
+        self.good_textbox.pack(pady=10)  # Add some padding for spacing
+
+    def show_evil_persona(self):
+        top = Toplevel(self.root)
+        top.title("Evil Persona")
         
-        audio_config = texttospeech.AudioConfig(
-            audio_encoding=texttospeech.AudioEncoding.LINEAR16
-        )
-        
-        try:
-            response = self.text_to_speech_client.synthesize_speech(
-                input=synthesis_input,
-                voice=voice,
-                audio_config=audio_config
-            )
-            
-            # Play audio
-            with self.audio_lock:
-                stream = self.p.open(
-                    format=pyaudio.paInt16,
-                    channels=1,
-                    rate=24000,
-                    output=True
-                )
-                stream.write(response.audio_content)
-                stream.stop_stream()
-                stream.close()
-                
-        except Exception as e:
-            self.log_message(f"Text-to-speech error: {e}")
+        img_resized = self.evil_image.resize((512, 512))
+        img_tk = ImageTk.PhotoImage(img_resized)
+        label = tk.Label(top, image=img_tk)
+        label.image = img_tk  # Keep a reference to the image
+        label.pack()
 
-    def process_audio(self):
-        while self.is_running:
-            # Record and recognize speech
-            audio_data = self.record_audio()
-            if not self.is_running:
-                break
-                
-            transcription = self.recognize_speech(audio_data)
-            if transcription:
-                self.log_message(f"You said: {transcription}")
-                
-                # Get response from Dialogflow
-                mood = random.choice(["evil", "good"])
-                response = self.get_dialogflow_response(transcription, mood)
-                final_response = f"{'Evil' if mood == 'evil' else 'Good'}: {response}"
-                
-                self.log_message(f"Response: {final_response}")
-                
-                # Convert response to speech
-                self.text_to_speech(final_response)
+        # Textbox for additional input or information
+        self.evil_textbox = tk.Text(top, height=5, width=50)  # Adjust height and width as needed
+        self.evil_textbox.pack(pady=10)  # Add some padding for spacing
 
-    def start_system(self):
-        self.is_running = True
-        Thread(target=self.process_audio, daemon=True).start()
-        self.start_button.config(state=tk.DISABLED)
-        self.stop_button.config(state=tk.NORMAL)
+    def hide_upload_interface(self):
+        # Hide the upload button and related labels and canvases
+        self.upload_button.grid_forget()
+        self.good_label.grid_forget()
+        self.good_canvas.grid_forget()
+        self.evil_label.grid_forget()
+        self.evil_canvas.grid_forget()
+        self.title.grid_forget()  # Hide the title
+        self.frame.grid_forget()  # Hide the entire frame
 
-    def stop_system(self):
-        self.is_running = False
-        self.start_button.config(state=tk.NORMAL)
-        self.stop_button.config(state=tk.DISABLED)
+    def insert_into_textbox(self, persona, message):
+        """
+        This function inserts the message into the correct persona's textbox
+        based on the persona argument ('good' or 'evil').
+        """
+        if message:
+            if persona == 'good':
+                self.good_textbox.insert(tk.END, f"{message}\n")
+            elif persona == 'evil':
+                self.evil_textbox.insert(tk.END, f"{message}\n")
 
-    def run(self):
-        self.root.mainloop()
-        self.p.terminate()
 
 if __name__ == "__main__":
-    system = SpeechDialogSystem()
-    system.run()
+    root = tk.Tk()
+    app = PersonaPhotoBooth(root)
+
+    root.mainloop()

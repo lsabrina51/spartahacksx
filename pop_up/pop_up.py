@@ -1,7 +1,6 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, Toplevel
 from PIL import Image, ImageTk, ImageEnhance, ImageOps
-import os
 
 class PersonaPhotoBooth:
     def __init__(self, root):
@@ -31,14 +30,7 @@ class PersonaPhotoBooth:
         self.evil_canvas = tk.Canvas(self.frame, width=256, height=256, bg="white")
         self.evil_canvas.grid(row=3, column=1)
 
-        # Download Buttons
-        self.download_good_button = tk.Button(self.frame, text="Download Good Persona", state=tk.DISABLED, command=self.download_good_persona)
-        self.download_good_button.grid(row=4, column=0, pady=10)
-
-        self.download_evil_button = tk.Button(self.frame, text="Download Evil Persona", state=tk.DISABLED, command=self.download_evil_persona)
-        self.download_evil_button.grid(row=4, column=1, pady=10)
-
-        # Deploy Button (to execute another program)
+        # Deploy Button (to show the processed images)
         self.deploy_button = tk.Button(self.frame, text="Deploy", state=tk.DISABLED, command=self.deploy_program)
         self.deploy_button.grid(row=5, column=0, columnspan=2, pady=10)
 
@@ -48,8 +40,10 @@ class PersonaPhotoBooth:
         self.evil_image = None
 
     def deploy_program(self): 
-        #connect with program later 
-        print("Hello world")
+        if self.good_image and self.evil_image:
+            self.show_good_persona()
+            self.show_evil_persona()
+            self.hide_upload_interface()  # Hide the upload interface
 
     def upload_image(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png"), ("Image Files", "*.jpg"), ("Image Files", "*.jpeg")])
@@ -73,24 +67,8 @@ class PersonaPhotoBooth:
             self.display_image(self.good_image, self.good_canvas)
             self.display_image(self.evil_image, self.evil_canvas)
 
-            self.save_images()
-
-            # Enable the download buttons
-            #self.download_good_button.config(state=tk.NORMAL)
-            #self.download_evil_button.config(state=tk.NORMAL)
-     
-    def save_images(self):
-        # Create a folder to save the images (if it doesn't exist already)
-        save_dir = "processed_images"
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-
-        good_image_path = os.path.join(save_dir, f"good_persona.png")
-        evil_image_path = os.path.join(save_dir, f"evil_persona.png")
-
-        # Save the images
-        self.good_image.save(good_image_path)
-        self.evil_image.save(evil_image_path)
+            # Enable the deploy button
+            self.deploy_button.config(state=tk.NORMAL)
 
     def apply_good_persona(self, img):
         # Apply brightness enhancement (brighten the image)
@@ -118,18 +96,43 @@ class PersonaPhotoBooth:
         canvas.create_image(0, 0, image=img_tk, anchor=tk.NW)
         canvas.image = img_tk  # Keep a reference to the image
 
-    def download_good_persona(self):
-        if self.good_image:
-            file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG", "*.png")])
-            if file_path:
-                self.good_image.save(file_path)
+    def show_good_persona(self):
+        top = Toplevel(self.root)
+        top.title("Good Persona")
+        
+        img_resized = self.good_image.resize((512, 512))
+        img_tk = ImageTk.PhotoImage(img_resized)
+        label = tk.Label(top, image=img_tk)
+        label.image = img_tk  # Keep a reference to the image
+        label.pack()
 
-    def download_evil_persona(self):
-        if self.evil_image:
-            file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG", "*.png")])
-            if file_path:
-                self.evil_image.save(file_path)
+        # Textbox for additional input or information
+        self.good_textbox = tk.Text(top, height=5, width=50)  # Adjust height and width as needed
+        self.good_textbox.pack(pady=10)  # Add some padding for spacing
 
+    def show_evil_persona(self):
+        top = Toplevel(self.root)
+        top.title("Evil Persona")
+        
+        img_resized = self.evil_image.resize((512, 512))
+        img_tk = ImageTk.PhotoImage(img_resized)
+        label = tk.Label(top, image=img_tk)
+        label.image = img_tk  # Keep a reference to the image
+        label.pack()
+
+        # Textbox for additional input or information
+        self.evil_textbox = tk.Text(top, height=5, width=50)  # Adjust height and width as needed
+        self.evil_textbox.pack(pady=10)  # Add some padding for spacing
+
+    def hide_upload_interface(self):
+        # Hide the upload button and related labels and canvases
+        self.upload_button.grid_forget()
+        self.good_label.grid_forget()
+        self.good_canvas.grid_forget()
+        self.evil_label.grid_forget()
+        self.evil_canvas.grid_forget()
+        self.title.grid_forget()  # Hide the title
+        self.frame.grid_forget()  # Hide the entire frame
 
 if __name__ == "__main__":
     root = tk.Tk()
